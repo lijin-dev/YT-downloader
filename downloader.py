@@ -20,19 +20,13 @@ def download_hd_video(video_url):
         'format': 'bestvideo+bestaudio/best',
         'merge_output_format': 'mp4',
         'outtmpl': os.path.join(output_folder, '%(title)s.%(ext)s'),
-        # ⚡ BYPASS BOT DETECTION CONFIGURATION PARAMETERS
+        # 🔒 ADVANCED BYPASS: Use OAuth authentication to verify the server identity
+        'username': 'oauth2',
+        'password': '', 
         'extractor_args': {
             'youtube': {
-                # Force yt-dlp to request streams using alternative secure web API endpoints
-                'player_client': ['web_safari', 'ios', 'android'],
-                'skip': ['webpage', 'configs']
+                'player_client': ['ios', 'android'],
             }
-        },
-        'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Sec-Fetch-Mode': 'navigate'
         }
     }
     
