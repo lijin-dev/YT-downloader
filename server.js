@@ -14,53 +14,53 @@ app.get('/download', (req, res) => {
 
     console.log(`🚀 Web Request Received! Processing URL: ${videoUrl}`);
 
-    // Create the downloads folder structure if it doesn't exist
     const downloadsFolder = path.join(process.cwd(), 'downloads');
     if (!fs.existsSync(downloadsFolder)){
         fs.mkdirSync(downloadsFolder, { recursive: true });
     }
 
-    // Run your python script securely behind the scenes
     exec(`python downloader.py "${videoUrl}"`, (error, stdout, stderr) => {
-        // Log Python outputs directly to your Render dashboard log panel for easy viewing
-        console.log("Python output stdout:", stdout);
-        if (stderr) console.error("Python error stderr:", stderr);
+        console.log("Python stdout logs:", stdout);
+        if (stderr) console.error("Python stderr logs:", stderr);
 
         if (error) {
             console.error(`Execution Error: ${error.message}`);
             return res.status(500).send('Server failed to process download.');
         }
 
-        // Look for the finished video inside the /downloads folder first
+        // 1. Check the /downloads subfolder first
         fs.readdir(downloadsFolder, (err, files) => {
             const videoFiles = (files || []).filter(file => file.endsWith('.mp4') || file.endsWith('.mkv') || file.endsWith('.webm'));
 
-            // ⚠️ FALLBACK STRATEGY: If the downloads folder is empty, check the main server root folder!
+            // ⚠️ FALLBACK STRATEGY: If empty, check the main server root folder!
             if (err || videoFiles.length === 0) {
-                console.log("Looking for file inside main root folder instead...");
+                console.log("Checking main root folder instead...");
                 
                 fs.readdir(process.cwd(), (rootErr, rootFiles) => {
                     const rootVideoFiles = (rootFiles || []).filter(file => file.endsWith('.mp4') || file.endsWith('.mkv') || file.endsWith('.webm'));
                     
                     if (rootErr || rootVideoFiles.length === 0) {
-                        console.error("❌ Python completed but no video file was found anywhere on the server filesystem.");
+                        console.error("❌ No video file found anywhere on server filesystem."); 
                         return res.status(500).send('Could not find downloaded file.');
                     }
 
-                    // Sort files to grab the absolute newest video compiled in the root
-                    const newestRootFile = rootVideoFiles
+                    // Map files by time to grab the newest video compiled
+                    const timedRootFiles = rootVideoFiles
                         .map(file => ({ name: file, time: fs.statSync(path.join(process.cwd(), file)).mtime.getTime() }))
-                        .sort((a, b) => b.time - a.time)[0].name;
+                        .sort((a, b) => b.time - a.time);
+
+                    // ✅ FIXED: Grab the first object out of the sorted array structure explicitly
+                    const newestRootFile = timedRootFiles[0].name;
 
                     const rootFilePath = path.join(process.cwd(), newestRootFile);
-                    console.log(`📦 Found inside root! Streaming video to user: ${newestRootFile}`);
+                    console.log(`📦 Found inside root! Streaming file to mobile browser: ${newestRootFile}`);
 
                     return res.download(rootFilePath, newestRootFile, (downloadError) => {
                         if (!downloadError) {
                             try {
-                                fs.unlinkSync(rootFilePath); // Clear space
-                                console.log(`🧹 Cleaned up root file: ${newestRootFile}`);
-                            } catch (e) { console.error(e); }
+                                fs.unlinkSync(rootFilePath);
+                                console.log(`🧹 Cleaned up root space file: ${newestRootFile}`);
+                            } catch (e) { console.error("Cleanup error:", e); }
                         }
                     });
                 });
@@ -68,19 +68,22 @@ app.get('/download', (req, res) => {
             }
 
             // Normal path: Find the newest file inside the /downloads subfolder
-            const newestFile = videoFiles
+            const timedFiles = videoFiles
                 .map(file => ({ name: file, time: fs.statSync(path.join(downloadsFolder, file)).mtime.getTime() }))
-                .sort((a, b) => b.time - a.time)[0].name;
+                .sort((a, b) => b.time - a.time);
+
+            // ✅ FIXED: Grab the first item from the array configuration map cleanly
+            const newestFile = timedFiles[0].name;
 
             const filePath = path.join(downloadsFolder, newestFile);
-            console.log(`📦 Found inside downloads folder! Streaming video to user: ${newestFile}`);
+            console.log(`📦 Found inside downloads folder! Streaming file: ${newestFile}`);
 
             res.download(filePath, newestFile, (downloadError) => {
                 if (!downloadError) {
                     try {
-                        fs.unlinkSync(filePath); // Clear space
-                        console.log(`🧹 Cleaned up folder file: ${newestFile}`);
-                    } catch (e) { console.error(e); }
+                        fs.unlinkSync(filePath);
+                        console.log(`🧹 Cleaned up folder space file: ${newestFile}`);
+                    } catch (e) { console.error("Cleanup error:", e); }
                 }
             });
         });
