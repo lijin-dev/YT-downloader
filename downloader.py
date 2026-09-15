@@ -20,9 +20,8 @@ def download_hd_video(video_url):
         'format': 'bestvideo+bestaudio/best',
         'merge_output_format': 'mp4',
         'outtmpl': os.path.join(output_folder, '%(title)s.%(ext)s'),
-        # 🔒 ADVANCED BYPASS: Use OAuth authentication to verify the server identity
-        'username': 'oauth2',
-        'password': '', 
+        # 🍪 FIXED: Swapped out dead OAuth for secure local cookie parameters
+        'cookiefile': 'cookies.txt', 
         'extractor_args': {
             'youtube': {
                 'player_client': ['ios', 'android'],
